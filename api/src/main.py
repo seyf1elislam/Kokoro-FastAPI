@@ -6,14 +6,12 @@ import sys
 from contextlib import asynccontextmanager
 
 import uvicorn
-from loguru import logger
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from loguru import logger
 
 from .core.config import settings
-from .services.tts_model import TTSModel
 from .routers.development import router as dev_router
-from .services.tts_service import TTSService
 from .routers.openai_compatible import router as openai_router
 from .services.share_link import start_cloudflared
 
@@ -47,7 +45,7 @@ async def lifespan(app: FastAPI):
     # Initialize the main model with warm-up
     voicepack_count = await TTSModel.setup()
     # boundary = "█████╗"*9
-    boundary = "░" * 24
+    boundary = "░" * 2*12
     startup_msg = f"""
 
 {boundary}
