@@ -20,7 +20,6 @@ from .routers.openai_compatible import router as openai_router
 from .routers.debug import router as debug_router
 
 from .services.share_link import start_cloudflared
-from .services.tts_model import TTSModel
 
 def setup_logger():
     """Configure loguru logger with custom formatting"""
