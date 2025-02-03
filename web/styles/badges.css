@@ -1,0 +1,30 @@
+.badges-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 0.5rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    z-index: 2;
+}
+
+.badge {
+    height: 28px;
+    display: flex;
+    align-items: center;
+    transition: opacity 0.2s ease;
+}
+
+.badge iframe {
+    height: 28px !important;
+}
+
+.badge:hover {
+    opacity: 0.9;
+}
+
+.badge img {
+    height: 100%;
+    border-radius: 4px;
+}

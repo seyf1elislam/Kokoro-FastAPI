@@ -2,6 +2,50 @@
 
 Notable changes to this project will be documented in this file.
 
+## [v0.1.4] - 2025-01-30
+### Added
+- Smart Chunking System:
+  - New text_processor with smart_split for improved sentence boundary detection
+  - Dynamically adjusts chunk sizes based on sentence structure, using phoneme/token information in an intial pass
+  - Should avoid ever going over the 510 limit per chunk, while preserving natural cadence
+- Web UI Added (To Be Replacing Gradio):
+  - Integrated streaming with tempfile generation
+  - Download links available in X-Download-Path header
+  - Configurable cleanup triggers for temp files
+- Debug Endpoints:
+  - /debug/threads for thread information and stack traces
+  - /debug/storage for temp file and output directory monitoring
+  - /debug/system for system resource information
+  - /debug/session_pools for ONNX/CUDA session status
+- Automated Model Management:
+  - Auto-download from releases page
+  - Included download scripts for manual installation
+  - Pre-packaged voice models in repository
+
+### Changed
+- Significant architectural improvements:
+  - Multi-model architecture support
+  - Enhanced concurrency handling
+  - Improved streaming header management
+  - Better resource/session pool management
+
+
+## [v0.1.2] - 2025-01-23
+### Structural Improvements
+- Models can be manually download and placed in api/src/models, or use included script
+- TTSGPU/TPSCPU/STTSService classes replaced with a ModelManager service
+  - CPU/GPU of each of ONNX/PyTorch (Note: Only Pytorch GPU, and ONNX CPU/GPU have been tested)
+  - Should be able to improve new models as they become available, or new architectures, in a more modular way
+- Converted a number of internal processes to async handling to improve concurrency
+- Improving separation of concerns towards plug-in and modular structure, making PR's and new features easier
+
+### Web UI (test release)
+- An integrated simple web UI has been added on the FastAPI server directly
+  - This can be disabled via core/config.py or ENV variables if desired. 
+  - Simplifies deployments, utility testing, aesthetics, etc 
+  - Looking to deprecate/collaborate/hand off the Gradio UI
+
+
 ## [v0.1.0] - 2025-01-13
 ### Changed
 - Major Docker improvements:

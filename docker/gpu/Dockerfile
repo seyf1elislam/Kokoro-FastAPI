@@ -1,4 +1,6 @@
-FROM nvidia/cuda:12.1.0-base-ubuntu22.04
+FROM --platform=$BUILDPLATFORM nvidia/cuda:12.3.2-cudnn9-runtime-ubuntu22.04
+# Set non-interactive frontend
+ENV DEBIAN_FRONTEND=noninteractive
 
 # Install Python and other dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -19,47 +21,43 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 RUN useradd -m -u 1000 appuser
 
 # Create directories and set ownership
-RUN mkdir -p /app/models && \
-    mkdir -p /app/api/src/voices && \
+RUN mkdir -p /app/api/src/voices && \
     chown -R appuser:appuser /app
 
 USER appuser
-
-# Download and extract models
-WORKDIR /app/models
-RUN curl -L -o model.tar.gz https://github.com/remsky/Kokoro-FastAPI/releases/download/v0.0.1/kokoro-82m-pytorch.tar.gz && \
-    tar xzf model.tar.gz && \
-    rm model.tar.gz
-
-# Download and extract voice models
-WORKDIR /app/api/src/voices
-RUN curl -L -o voices.tar.gz https://github.com/remsky/Kokoro-FastAPI/releases/download/v0.0.1/voice-models.tar.gz && \
-    tar xzf voices.tar.gz && \
-    rm voices.tar.gz
-
-# Switch back to app directory
 WORKDIR /app
 
 # Copy dependency files
 COPY --chown=appuser:appuser pyproject.toml ./pyproject.toml
 
-# Install dependencies
+# Install dependencies with GPU extras
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv venv && \
-    uv sync --extra gpu --no-install-project
+    uv sync --extra gpu
 
-# Copy project files
+# Copy project files including models
 COPY --chown=appuser:appuser api ./api
+COPY --chown=appuser:appuser web ./web
+COPY --chown=appuser:appuser docker/scripts/download_model.* ./
 
-# Install project
+# Install project with GPU extras
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --extra gpu
 
+COPY --chown=appuser:appuser docker/scripts/ /app/docker/scripts/
+RUN chmod +x docker/scripts/entrypoint.sh
+RUN chmod +x docker/scripts/download_model.sh
+
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
-ENV PYTHONPATH=/app:/app/models
+ENV PYTHONPATH=/app
 ENV PATH="/app/.venv/bin:$PATH"
 ENV UV_LINK_MODE=copy
 
+ENV USE_GPU=true
+ENV USE_ONNX=false
+ENV DOWNLOAD_PTH=true
+ENV DOWNLOAD_ONNX=false
+
 # Run FastAPI server
-CMD ["uv", "run", "python", "-m", "uvicorn", "api.src.main:app", "--host", "0.0.0.0", "--port", "8880", "--log-level", "debug"]
+CMD ["/app/docker/scripts/entrypoint.sh"]

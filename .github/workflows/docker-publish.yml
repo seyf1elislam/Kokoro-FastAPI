@@ -1,152 +1,139 @@
-name: Docker Build, Slim, and Publish
+name: Docker Build and Publish
 
 on:
   push:
-    branches:
-      - master
     tags: [ 'v*.*.*' ]
-  # Allow manual trigger from GitHub UI
   workflow_dispatch:
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-
 jobs:
-  build:
+  prepare-release:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get-version.outputs.version }}
+      is_prerelease: ${{ steps.check-prerelease.outputs.is_prerelease }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Get version
+        id: get-version
+        run: echo "version=$(cat VERSION)" >> $GITHUB_OUTPUT
+      
+      - name: Check if prerelease
+        id: check-prerelease
+        run: echo "is_prerelease=${{ contains(github.ref, '-pre') }}" >> $GITHUB_OUTPUT
+
+  build-cpu:
+    needs: prepare-release
     runs-on: ubuntu-latest
     permissions:
-      contents: read
       packages: write
-      actions: write
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Log in to the Container registry
-        uses: docker/login-action@v3
+      - name: Free disk space
+        run: |
+          echo "Listing current disk space"
+          df -h
+          echo "Cleaning up disk space..."
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache
+          docker system prune -af
+          echo "Disk space after cleanup"
+          df -h
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
         with:
-          registry: ${{ env.REGISTRY }}
+          driver-opts: |
+            image=moby/buildkit:latest
+            network=host
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Set up image names (converting to lowercase)
-      - name: Set image names
+      - name: Build and push CPU image
+        env:
+          DOCKER_BUILDKIT: 1
+          BUILDKIT_STEP_LOG_MAX_SIZE: 10485760
         run: |
-          echo "GPU_IMAGE_NAME=${{ env.REGISTRY }}/$(echo ${{ env.IMAGE_NAME }} | tr '[:upper:]' '[:lower:]')-gpu" >> $GITHUB_ENV
-          echo "CPU_IMAGE_NAME=${{ env.REGISTRY }}/$(echo ${{ env.IMAGE_NAME }} | tr '[:upper:]' '[:lower:]')-cpu" >> $GITHUB_ENV
-          echo "UI_IMAGE_NAME=${{ env.REGISTRY }}/$(echo ${{ env.IMAGE_NAME }} | tr '[:upper:]' '[:lower:]')-ui" >> $GITHUB_ENV
+          docker buildx build --platform linux/amd64,linux/arm64 \
+            -t ghcr.io/remsky/kokoro-fastapi-cpu:${{ needs.prepare-release.outputs.version }} \
+            -t ghcr.io/remsky/kokoro-fastapi-cpu:latest \
+            -f docker/cpu/Dockerfile \
+            --push \
+            --build-arg BUILDKIT_INLINE_CACHE=1 .
 
-      # Build GPU version
-      - name: Build GPU Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./docker/gpu/Dockerfile
-          push: false
-          load: true
-          tags: ${{ env.GPU_IMAGE_NAME }}:v0.1.0
-          build-args: |
-            DOCKER_BUILDKIT=1
-          platforms: linux/amd64
-
-      # Slim GPU version
-      - name: Slim GPU Docker image
-        run: |
-          docker pull dslim/slim
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock dslim/slim build \
-            --target ${{ env.GPU_IMAGE_NAME }}:v0.1.0 \
-            --tag ${{ env.GPU_IMAGE_NAME }}:v0.1.0-slim \
-            --include-path=/app/models \
-            --include-path=/app/api/src/voices \
-            --include-path=/app/.venv \
-            --include-bin=/usr/local/cuda/lib64 \
-            --include-bin=/usr/lib/x86_64-linux-gnu/libcudart.so \
-            --include-bin=/usr/lib/x86_64-linux-gnu/libcuda.so \
-            --include-shell \
-            --include-exe=python3,python3.10,espeak-ng \
-            --exclude-mounts=false \
-            --http-probe=false
-
-      # Push GPU versions
-      - name: Push GPU Docker images
-        run: |
-          docker push ${{ env.GPU_IMAGE_NAME }}:v0.1.0
-          docker push ${{ env.GPU_IMAGE_NAME }}:v0.1.0-slim
-          docker tag ${{ env.GPU_IMAGE_NAME }}:v0.1.0 ${{ env.GPU_IMAGE_NAME }}:latest
-          docker tag ${{ env.GPU_IMAGE_NAME }}:v0.1.0-slim ${{ env.GPU_IMAGE_NAME }}:latest-slim
-          docker push ${{ env.GPU_IMAGE_NAME }}:latest
-          docker push ${{ env.GPU_IMAGE_NAME }}:latest-slim
-
-      # Build CPU version
-      - name: Build CPU Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./docker/cpu/Dockerfile
-          push: false
-          load: true
-          tags: ${{ env.CPU_IMAGE_NAME }}:v0.1.0
-          build-args: |
-            DOCKER_BUILDKIT=1
-          platforms: linux/amd64
-
-      # Slim CPU version
-      - name: Slim CPU Docker image
-        run: |
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock dslim/slim build \
-            --target ${{ env.CPU_IMAGE_NAME }}:v0.1.0 \
-            --tag ${{ env.CPU_IMAGE_NAME }}:v0.1.0-slim \
-            --include-path=/app/models \
-            --include-path=/app/api/src/voices \
-            --include-path=/app/.venv \
-            --include-shell \
-            --include-exe=python3,python3.10,espeak-ng \
-            --exclude-mounts=false \
-            --http-probe=false
-
-      # Push CPU versions
-      - name: Push CPU Docker images
-        run: |
-          docker push ${{ env.CPU_IMAGE_NAME }}:v0.1.0
-          docker push ${{ env.CPU_IMAGE_NAME }}:v0.1.0-slim
-          docker tag ${{ env.CPU_IMAGE_NAME }}:v0.1.0 ${{ env.CPU_IMAGE_NAME }}:latest
-          docker tag ${{ env.CPU_IMAGE_NAME }}:v0.1.0-slim ${{ env.CPU_IMAGE_NAME }}:latest-slim
-          docker push ${{ env.CPU_IMAGE_NAME }}:latest
-          docker push ${{ env.CPU_IMAGE_NAME }}:latest-slim
-
-      # Build and push UI version
-      - name: Build and push UI Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./ui
-          file: ./ui/Dockerfile
-          push: true
-          tags: |
-            ${{ env.UI_IMAGE_NAME }}:v0.1.0
-            ${{ env.UI_IMAGE_NAME }}:latest
-          build-args: |
-            DOCKER_BUILDKIT=1
-          platforms: linux/amd64
-
-  create-release:
-    needs: build
+  build-gpu:
+    needs: prepare-release
     runs-on: ubuntu-latest
-    # Only run this job if we're pushing a tag
-    if: startsWith(github.ref, 'refs/tags/')
     permissions:
-      contents: write
       packages: write
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
-      
+
+      - name: Free disk space
+        run: |
+          echo "Listing current disk space"
+          df -h
+          echo "Cleaning up disk space..."
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache
+          docker system prune -af
+          echo "Disk space after cleanup"
+          df -h
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          driver-opts: |
+            image=moby/buildkit:latest
+            network=host
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push GPU image
+        env:
+          DOCKER_BUILDKIT: 1
+          BUILDKIT_STEP_LOG_MAX_SIZE: 10485760
+        run: |
+          docker buildx build --platform linux/amd64,linux/arm64 \
+            -t ghcr.io/remsky/kokoro-fastapi-gpu:${{ needs.prepare-release.outputs.version }} \
+            -t ghcr.io/remsky/kokoro-fastapi-gpu:latest \
+            -f docker/gpu/Dockerfile \
+            --push \
+            --build-arg BUILDKIT_INLINE_CACHE=1 .
+
+  create-release:
+    needs: [prepare-release, build-cpu, build-gpu]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
       - name: Create Release
         uses: softprops/action-gh-release@v1
-        env:
-          IS_PRERELEASE: ${{ contains(github.ref, '-pre') }}
         with:
           generate_release_notes: true
-          draft: false
-          prerelease: ${{ contains(github.ref, '-pre') }}
+          draft: true
+          prerelease: ${{ needs.prepare-release.outputs.is_prerelease }}

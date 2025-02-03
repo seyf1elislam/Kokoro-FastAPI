@@ -26,106 +26,161 @@ def sample_audio():
     return np.sin(2 * np.pi * frequency * t).astype(np.float32), sample_rate
 
 
-def test_convert_to_wav(sample_audio):
+@pytest.mark.asyncio
+async def test_convert_to_wav(sample_audio):
     """Test converting to WAV format"""
     audio_data, sample_rate = sample_audio
-    result = AudioService.convert_audio(audio_data, sample_rate, "wav")
+    # Write and finalize in one step for WAV
+    result = await AudioService.convert_audio(
+        audio_data,
+        sample_rate,
+        "wav",
+        is_first_chunk=True,
+        is_last_chunk=True
+    )
     assert isinstance(result, bytes)
     assert len(result) > 0
+    # Check WAV header
+    assert result.startswith(b'RIFF')
+    assert b'WAVE' in result[:12]
 
 
-def test_convert_to_mp3(sample_audio):
+@pytest.mark.asyncio
+async def test_convert_to_mp3(sample_audio):
     """Test converting to MP3 format"""
     audio_data, sample_rate = sample_audio
-    result = AudioService.convert_audio(audio_data, sample_rate, "mp3")
+    result = await AudioService.convert_audio(audio_data, sample_rate, "mp3")
     assert isinstance(result, bytes)
     assert len(result) > 0
+    # Check MP3 header (ID3 or MPEG frame sync)
+    assert result.startswith(b'ID3') or result.startswith(b'\xff\xfb')
 
 
-def test_convert_to_opus(sample_audio):
+@pytest.mark.asyncio
+async def test_convert_to_opus(sample_audio):
     """Test converting to Opus format"""
     audio_data, sample_rate = sample_audio
-    result = AudioService.convert_audio(audio_data, sample_rate, "opus")
+    result = await AudioService.convert_audio(audio_data, sample_rate, "opus")
     assert isinstance(result, bytes)
     assert len(result) > 0
+    # Check OGG header
+    assert result.startswith(b'OggS')
 
 
-def test_convert_to_flac(sample_audio):
+@pytest.mark.asyncio
+async def test_convert_to_flac(sample_audio):
     """Test converting to FLAC format"""
     audio_data, sample_rate = sample_audio
-    result = AudioService.convert_audio(audio_data, sample_rate, "flac")
+    result = await AudioService.convert_audio(audio_data, sample_rate, "flac")
     assert isinstance(result, bytes)
     assert len(result) > 0
+    # Check FLAC header
+    assert result.startswith(b'fLaC')
 
 
-def test_convert_to_aac(sample_audio):
+@pytest.mark.asyncio
+async def test_convert_to_aac(sample_audio):
     """Test converting to AAC format"""
     audio_data, sample_rate = sample_audio
-    result = AudioService.convert_audio(audio_data, sample_rate, "aac")
+    result = await AudioService.convert_audio(audio_data, sample_rate, "aac")
     assert isinstance(result, bytes)
     assert len(result) > 0
-    # AAC files typically start with an ADTS header
-    assert result.startswith(b'\xff\xf1') or result.startswith(b'\xff\xf9')
+    # Check ADTS header (AAC)
+    assert result.startswith(b'\xff\xf0') or result.startswith(b'\xff\xf1')
 
 
-def test_convert_to_pcm(sample_audio):
+@pytest.mark.asyncio
+async def test_convert_to_pcm(sample_audio):
     """Test converting to PCM format"""
     audio_data, sample_rate = sample_audio
-    result = AudioService.convert_audio(audio_data, sample_rate, "pcm")
+    result = await AudioService.convert_audio(audio_data, sample_rate, "pcm")
     assert isinstance(result, bytes)
     assert len(result) > 0
+    # PCM is raw bytes, so no header to check
 
 
-def test_convert_to_invalid_format_raises_error(sample_audio):
+@pytest.mark.asyncio
+async def test_convert_to_invalid_format_raises_error(sample_audio):
     """Test that converting to an invalid format raises an error"""
     audio_data, sample_rate = sample_audio
     with pytest.raises(ValueError, match="Format invalid not supported"):
-        AudioService.convert_audio(audio_data, sample_rate, "invalid")
+        await AudioService.convert_audio(audio_data, sample_rate, "invalid")
 
 
-def test_normalization_wav(sample_audio):
+@pytest.mark.asyncio
+async def test_normalization_wav(sample_audio):
     """Test that WAV output is properly normalized to int16 range"""
     audio_data, sample_rate = sample_audio
     # Create audio data outside int16 range
     large_audio = audio_data * 1e5
-    result = AudioService.convert_audio(large_audio, sample_rate, "wav")
+    # Write and finalize in one step for WAV
+    result = await AudioService.convert_audio(
+        large_audio,
+        sample_rate,
+        "wav",
+        is_first_chunk=True,
+        is_last_chunk=True
+    )
     assert isinstance(result, bytes)
     assert len(result) > 0
 
 
-def test_normalization_pcm(sample_audio):
+@pytest.mark.asyncio
+async def test_normalization_pcm(sample_audio):
     """Test that PCM output is properly normalized to int16 range"""
     audio_data, sample_rate = sample_audio
     # Create audio data outside int16 range
     large_audio = audio_data * 1e5
-    result = AudioService.convert_audio(large_audio, sample_rate, "pcm")
+    result = await AudioService.convert_audio(large_audio, sample_rate, "pcm")
     assert isinstance(result, bytes)
     assert len(result) > 0
 
 
-def test_invalid_audio_data():
+@pytest.mark.asyncio
+async def test_invalid_audio_data():
     """Test handling of invalid audio data"""
     invalid_audio = np.array([])  # Empty array
     sample_rate = 24000
     with pytest.raises(ValueError):
-        AudioService.convert_audio(invalid_audio, sample_rate, "wav")
+        await AudioService.convert_audio(invalid_audio, sample_rate, "wav")
 
 
-def test_different_sample_rates(sample_audio):
+@pytest.mark.asyncio
+async def test_different_sample_rates(sample_audio):
     """Test converting audio with different sample rates"""
     audio_data, _ = sample_audio
     sample_rates = [8000, 16000, 44100, 48000]
 
     for rate in sample_rates:
-        result = AudioService.convert_audio(audio_data, rate, "wav")
+        result = await AudioService.convert_audio(
+            audio_data,
+            rate,
+            "wav",
+            is_first_chunk=True,
+            is_last_chunk=True
+        )
         assert isinstance(result, bytes)
         assert len(result) > 0
 
 
-def test_buffer_position_after_conversion(sample_audio):
+@pytest.mark.asyncio
+async def test_buffer_position_after_conversion(sample_audio):
     """Test that buffer position is reset after writing"""
     audio_data, sample_rate = sample_audio
-    result = AudioService.convert_audio(audio_data, sample_rate, "wav")
+    # Write and finalize in one step for first conversion
+    result = await AudioService.convert_audio(
+        audio_data,
+        sample_rate,
+        "wav",
+        is_first_chunk=True,
+        is_last_chunk=True
+    )
     # Convert again to ensure buffer was properly reset
-    result2 = AudioService.convert_audio(audio_data, sample_rate, "wav")
+    result2 = await AudioService.convert_audio(
+        audio_data,
+        sample_rate,
+        "wav",
+        is_first_chunk=True,
+        is_last_chunk=True
+    )
     assert len(result) == len(result2)

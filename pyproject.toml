@@ -1,6 +1,6 @@
 [project]
 name = "kokoro-fastapi"
-version = "0.1.0"
+version = "0.1.4"
 description = "FastAPI TTS Service"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -16,7 +16,6 @@ dependencies = [
     # ML/DL Base
     "numpy>=1.26.0",
     "scipy==1.14.1",
-    "onnxruntime==1.20.1",
     # Audio processing
     "soundfile==0.13.0",
     # Text processing
@@ -34,14 +33,20 @@ dependencies = [
     "ebooklib>=0.18",
     "html2text>=2024.2.26",
     "pydub>=0.25.1",
+    "matplotlib>=3.10.0",
+    "semchunk>=3.0.1",
+    "mutagen>=1.47.0",
+    "psutil>=6.1.1",
 ]
 
 [project.optional-dependencies]
 gpu = [
     "torch==2.5.1+cu121",
+    "onnxruntime-gpu==1.20.1",
 ]
 cpu = [
     "torch==2.5.1",
+    "onnxruntime==1.20.1",
 ]
 test = [
     "pytest==8.0.0",

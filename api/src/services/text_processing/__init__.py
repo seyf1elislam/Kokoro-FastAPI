@@ -1,13 +1,19 @@
+"""Text processing pipeline."""
+
 from .normalizer import normalize_text
-from .phonemizer import EspeakBackend, PhonemizerBackend, phonemize
-from .vocabulary import VOCAB, decode_tokens, tokenize
+from .phonemizer import phonemize
+from .vocabulary import tokenize
+from .text_processor import process_text_chunk, smart_split
+
+def process_text(text: str) -> list[int]:
+    """Process text into token IDs (for backward compatibility)."""
+    return process_text_chunk(text)
 
 __all__ = [
-    "normalize_text",
-    "phonemize",
-    "tokenize",
-    "decode_tokens",
-    "VOCAB",
-    "PhonemizerBackend",
-    "EspeakBackend",
+    'normalize_text',
+    'phonemize',
+    'tokenize',
+    'process_text',
+    'process_text_chunk',
+    'smart_split'
 ]

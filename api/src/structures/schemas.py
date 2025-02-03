@@ -23,7 +23,10 @@ class TTSStatus(str, Enum):
 
 # OpenAI-compatible schemas
 class OpenAISpeechRequest(BaseModel):
-    model: Literal["tts-1", "tts-1-hd", "kokoro"] = "kokoro"
+    model: str = Field(
+        default="kokoro",
+        description="The model to use for generation. Supported models: tts-1, tts-1-hd, kokoro"
+    )
     input: str = Field(..., description="The text to generate audio for")
     voice: str = Field(
         default="af",
@@ -42,4 +45,8 @@ class OpenAISpeechRequest(BaseModel):
     stream: bool = Field(
         default=True,  # Default to streaming for OpenAI compatibility
         description="If true (default), audio will be streamed as it's generated. Each chunk will be a complete sentence.",
+    )
+    return_download_link: bool = Field(
+        default=False,
+        description="If true, returns a download link in X-Download-Path header after streaming completes",
     )

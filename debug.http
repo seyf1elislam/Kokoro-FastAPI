@@ -1,0 +1,17 @@
+### Get Thread Information
+GET http://localhost:8880/debug/threads
+Accept: application/json
+
+### Get Storage Information
+GET http://localhost:8880/debug/storage
+Accept: application/json
+
+### Get System Information
+GET http://localhost:8880/debug/system
+Accept: application/json
+
+### Get Session Pool Status
+# Shows active ONNX sessions, CUDA stream usage, and session ages
+# Useful for debugging resource exhaustion issues
+GET http://localhost:8880/debug/session_pools
+Accept: application/json

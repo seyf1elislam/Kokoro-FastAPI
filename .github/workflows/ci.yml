@@ -15,11 +15,16 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    # Add FFmpeg installation step
-    - name: Install FFmpeg
+    # Match Dockerfile dependencies
+    - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y ffmpeg
+        sudo apt-get install -y --no-install-recommends \
+          espeak-ng \
+          git \
+          libsndfile1 \
+          curl \
+          ffmpeg
     
     - name: Install uv
       uses: astral-sh/setup-uv@v5

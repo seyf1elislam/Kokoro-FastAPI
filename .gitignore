@@ -18,7 +18,8 @@ __pycache__/
 *.egg
 dist/
 build/
-
+*.onnx
+*.pth
 # Environment
 # .env
 .venv/
@@ -38,6 +39,26 @@ ENV/
 *.pth
 *.tar*
 
+
+# Other project files
+.env
+Kokoro-82M/
+ui/data/
+EXTERNAL_UV_DOCUMENTATION*
+app
+api/temp_files/
+
+# Docker
+Dockerfile*
+docker-compose*
+examples/ebook_test/chapter_to_audio.py
+examples/ebook_test/chapters_to_audio.py
+examples/ebook_test/parse_epub.py
+api/src/voices/af_jadzia.pt
+examples/assorted_checks/test_combinations/output/*
+examples/assorted_checks/test_openai/output/*
+
+
 # Audio files
 examples/*.wav
 examples/*.pcm
@@ -46,22 +67,5 @@ examples/*.flac
 examples/*.acc
 examples/*.ogg
 examples/speech.mp3
-examples/phoneme_examples/output/example_1.wav
-examples/phoneme_examples/output/example_2.wav
-examples/phoneme_examples/output/example_3.wav
-
-# Other project files
-Kokoro-82M/
-ui/data/
-EXTERNAL_UV_DOCUMENTATION*
-app
-
-# Docker
-Dockerfile*
-docker-compose*
-examples/assorted_checks/River_of_Teet_-_Sarah_Gailey.epub
-examples/ebook_test/chapter_to_audio.py
-examples/ebook_test/chapters_to_audio.py
-examples/ebook_test/parse_epub.py
-examples/ebook_test/River_of_Teet_-_Sarah_Gailey.epub
-examples/ebook_test/River_of_Teet_-_Sarah_Gailey.txt
+examples/phoneme_examples/output/*.wav
+examples/assorted_checks/benchmarks/output_audio/*

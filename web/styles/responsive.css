@@ -1,0 +1,95 @@
+@media (max-width: 1023px) {
+    .container {
+        padding: 2rem 1rem;
+    }
+
+    h1 {
+        font-size: 3rem;
+    }
+
+    .subtitle {
+        font-size: 1.2rem;
+    }
+
+    .cup {
+        width: 30px;
+        height: 40px;
+    }
+
+    .handle {
+        width: 12px;
+        height: 20px;
+        right: -12px;
+        top: 8px;
+    }
+
+    .steam {
+        top: -12px;
+    }
+
+    .steam::before,
+    .steam::after {
+        width: 6px;
+    }
+
+    .input-section, .player-section {
+        padding: 1.5rem;
+    }
+
+    .voice-select-container {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .options {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .sun {
+        width: 80px;
+        height: 80px;
+        top: 10px;
+        right: 10px;
+    }
+
+    .button-group {
+        flex-direction: column;
+    }
+
+    .player-container {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+
+    .player-controls {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .player-btn {
+        width: 100%;
+    }
+
+    .volume-control {
+        border-left: none;
+        border-top: 1px solid var(--border);
+        padding-left: 0;
+        padding-top: 0.75rem;
+        width: 100%;
+    }
+
+    .volume-slider {
+        flex: 1;
+        width: auto;
+    }
+
+    .wave-container {
+        height: 80px;
+    }
+
+    .time-display {
+        text-align: center;
+    }
+}

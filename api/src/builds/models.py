@@ -337,11 +337,13 @@ def recursive_munch(d):
     else:
         return d
 
-def build_model(path, device):
+async def build_model(path, device):
+    from ..core.paths import load_json, load_model_weights
+    
     config = Path(__file__).parent / 'config.json'
     assert config.exists(), f'Config path incorrect: config.json not found at {config}'
-    with open(config, 'r') as r:
-        args = recursive_munch(json.load(r))
+    
+    args = recursive_munch(await load_json(config))
     assert args.decoder.type == 'istftnet', f'Unknown decoder type: {args.decoder.type}'
     decoder = Decoder(dim_in=args.hidden_dim, style_dim=args.style_dim, dim_out=args.n_mels,
             resblock_kernel_sizes = args.decoder.resblock_kernel_sizes,
@@ -365,7 +367,8 @@ def build_model(path, device):
         decoder=decoder.to(device).eval(),
         text_encoder=text_encoder.to(device).eval(),
     )
-    for key, state_dict in torch.load(path, map_location='cpu', weights_only=True)['net'].items():
+    weights = await load_model_weights(path, device=device)
+    for key, state_dict in weights['net'].items():
         assert key in model, key
         try:
             model[key].load_state_dict(state_dict)

@@ -9,25 +9,34 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8880
 
-    # TTS Settings
+    # Application Settings
     output_dir: str = "output"
     output_dir_size_limit_mb: float = 500.0  # Maximum size of output directory in MB
     default_voice: str = "af"
-    model_dir: str = "/app/models"  # Base directory for model files
-    pytorch_model_path: str = "kokoro-v0_19.pth"
-    onnx_model_path: str = "kokoro-v0_19.onnx"
-    voices_dir: str = "voices"
+    use_gpu: bool = True  # Whether to use GPU acceleration if available
+    use_onnx: bool = False  # Whether to use ONNX runtime
+    allow_local_voice_saving: bool = False  # Whether to allow saving combined voices locally
+    
+    # Container absolute paths
+    model_dir: str = "/app/api/src/models"  # Absolute path in container
+    voices_dir: str = "/app/api/src/voices"  # Absolute path in container
+    
+    # Audio Settings
     sample_rate: int = 24000
-    max_chunk_size: int = 300  # Maximum size of text chunks for processing
+    max_chunk_size: int = 400  # Maximum size of text chunks for processing
     gap_trim_ms: int = 250  # Amount to trim from streaming chunk ends in milliseconds
 
-    # ONNX Optimization Settings
-    onnx_num_threads: int = 4  # Number of threads for intra-op parallelism
-    onnx_inter_op_threads: int = 4  # Number of threads for inter-op parallelism
-    onnx_execution_mode: str = "parallel"  # parallel or sequential
-    onnx_optimization_level: str = "all"  # all, basic, or disabled
-    onnx_memory_pattern: bool = True  # Enable memory pattern optimization
-    onnx_arena_extend_strategy: str = "kNextPowerOfTwo"  # Memory allocation strategy
+    # Web Player Settings
+    enable_web_player: bool = True  # Whether to serve the web player UI
+    web_player_path: str = "web"  # Path to web player static files
+    cors_origins: list[str] = ["*"]  # CORS origins for web player
+    cors_enabled: bool = True  # Whether to enable CORS
+
+    # Temp File Settings for WEB Ui
+    temp_file_dir: str = "api/temp_files"  # Directory for temporary audio files (relative to project root)
+    max_temp_dir_size_mb: int = 2048  # Maximum size of temp directory (2GB)
+    max_temp_dir_age_hours: int = 1  # Remove temp files older than 1 hour
+    max_temp_dir_count: int = 3  # Maximum number of temp files to keep
 
     #extra 
     public_api: bool = False

@@ -1,23 +1,23 @@
 === Benchmark Statistics (with correct RTF) ===
 
-Total tokens processed: 1800
-Total audio generated (s): 568.53
-Total test duration (s): 306.02
-Average processing rate (tokens/s): 5.75
-Average RTF: 0.55
-Average Real Time Speed: 1.81
+Total tokens processed: 1500
+Total audio generated (s): 427.90
+Total test duration (s): 10.84
+Average processing rate (tokens/s): 133.35
+Average RTF: 0.02
+Average Real Time Speed: 41.67
 
 === Per-chunk Stats ===
 
-Average chunk size (tokens): 600.00
-Min chunk size (tokens): 300
-Max chunk size (tokens): 900
-Average processing time (s): 101.89
-Average output length (s): 189.51
+Average chunk size (tokens): 300.00
+Min chunk size (tokens): 100
+Max chunk size (tokens): 500
+Average processing time (s): 2.13
+Average output length (s): 85.58
 
 === Performance Ranges ===
 
-Processing rate range (tokens/s): 5.30 - 6.26
-RTF range: 0.51x - 0.59x
-Real Time Speed range: 1.69x - 1.96x
+Processing rate range (tokens/s): 102.04 - 159.74
+RTF range: 0.02x - 0.03x
+Real Time Speed range: 33.33x - 50.00x
 

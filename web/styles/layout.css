@@ -1,0 +1,60 @@
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+    position: relative;
+    z-index: 1;
+}
+
+main {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    min-height: 600px;
+}
+
+@media (min-width: 1024px) {
+    main {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        align-items: stretch;
+    }
+
+    .input-section, .player-section {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .input-section textarea {
+        flex: 1;
+        min-height: 200px;
+    }
+
+    .player-section {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .audio-controls {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .wave-container {
+        flex: 1;
+        min-height: 200px;
+    }
+}
+
+.input-section, .player-section {
+    background: var(--surface);
+    padding: 2rem;
+    border-radius: 1rem;
+    border: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+                0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
