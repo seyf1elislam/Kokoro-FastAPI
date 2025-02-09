@@ -31,13 +31,11 @@ export class WaveVisualizer {
 
     setupProgressBar() {
         this.progressBar = document.createElement('progress');
-        this.progressBar.style.width = '100%';
         this.progressBar.max = 100;
         this.progressBar.value = 0;
         this.progressBar.className = 'generation-progress';
-        // Insert inside player-container, after wave-container
-        const playerContainer = this.container.closest('.player-container');
-        playerContainer.insertBefore(this.progressBar, playerContainer.lastElementChild);
+        // Insert inside wave-container at the bottom
+        this.container.appendChild(this.progressBar);
         this.progressBar.style.display = 'none';
     }
 

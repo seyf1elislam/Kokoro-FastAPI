@@ -1,7 +1,7 @@
 export class VoiceService {
     constructor() {
         this.availableVoices = [];
-        this.selectedVoices = new Set();
+        this.selectedVoices = new Map(); // Changed to Map to store voice:weight pairs
     }
 
     async loadVoices() {
@@ -39,16 +39,41 @@ export class VoiceService {
     }
 
     getSelectedVoices() {
-        return Array.from(this.selectedVoices);
+        return Array.from(this.selectedVoices.keys());
+    }
+
+    getSelectedVoiceWeights() {
+        return Array.from(this.selectedVoices.entries()).map(([voice, weight]) => ({
+            voice,
+            weight
+        }));
     }
 
     getSelectedVoiceString() {
-        return Array.from(this.selectedVoices).join('+');
+        const entries = Array.from(this.selectedVoices.entries());
+        
+        // If only one voice with weight 1, return just the voice name
+        if (entries.length === 1 && entries[0][1] === 1) {
+            return entries[0][0];
+        }
+        
+        // Otherwise return voice(weight) format
+        return entries
+            .map(([voice, weight]) => `${voice}(${weight})`)
+            .join('+');
     }
 
-    addVoice(voice) {
+    addVoice(voice, weight = 1) {
         if (this.availableVoices.includes(voice)) {
-            this.selectedVoices.add(voice);
+            this.selectedVoices.set(voice, parseFloat(weight) || 1);
+            return true;
+        }
+        return false;
+    }
+
+    updateWeight(voice, weight) {
+        if (this.selectedVoices.has(voice)) {
+            this.selectedVoices.set(voice, parseFloat(weight) || 1);
             return true;
         }
         return false;

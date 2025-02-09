@@ -2,15 +2,19 @@
 
 import json
 import os
+import io
+import tempfile
 from typing import AsyncGenerator, Dict, List, Union
 
+import torch
+import aiofiles
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from fastapi.responses import StreamingResponse, FileResponse
 from loguru import logger
 
 from ..services.audio import AudioService
 from ..services.tts_service import TTSService
-from ..structures.schemas import OpenAISpeechRequest
+from ..structures import OpenAISpeechRequest
 from ..core.config import settings
 
 # Load OpenAI mappings
@@ -64,64 +68,75 @@ def get_model_name(model: str) -> str:
     base_name = _openai_mappings["models"].get(model)
     if not base_name:
         raise ValueError(f"Unsupported model: {model}")
-    # Add extension based on runtime config
-    extension = ".onnx" if settings.use_onnx else ".pth"
-    return base_name + extension
+    return base_name + ".pth"
+
 
 async def process_voices(
     voice_input: Union[str, List[str]], tts_service: TTSService
 ) -> str:
-    """Process voice input into a combined voice, handling both string and list formats"""
+    """Process voice input, handling both string and list formats
+    
+    Returns:
+        Voice name to use (with weights if specified)
+    """
     # Convert input to list of voices
     if isinstance(voice_input, str):
         # Check if it's an OpenAI voice name
         mapped_voice = _openai_mappings["voices"].get(voice_input)
         if mapped_voice:
             voice_input = mapped_voice
-        voices = [v.strip() for v in voice_input.split("+") if v.strip()]
+        # Split on + but preserve any parentheses
+        voices = []
+        for part in voice_input.split("+"):
+            part = part.strip()
+            if not part:
+                continue
+            # Extract voice name without weight
+            voice_name = part.split("(")[0].strip()
+            # Check if it's a valid voice
+            available_voices = await tts_service.list_voices()
+            if voice_name not in available_voices:
+                raise ValueError(
+                    f"Voice '{voice_name}' not found. Available voices: {', '.join(sorted(available_voices))}"
+                )
+            voices.append(part)
     else:
         # For list input, map each voice if it's an OpenAI voice name
-        voices = [_openai_mappings["voices"].get(v, v) for v in voice_input]
-        voices = [v.strip() for v in voices if v.strip()]
+        voices = []
+        for v in voice_input:
+            mapped = _openai_mappings["voices"].get(v, v)
+            voice_name = mapped.split("(")[0].strip()
+            # Check if it's a valid voice
+            available_voices = await tts_service.list_voices()
+            if voice_name not in available_voices:
+                raise ValueError(
+                    f"Voice '{voice_name}' not found. Available voices: {', '.join(sorted(available_voices))}"
+                )
+            voices.append(mapped)
 
     if not voices:
         raise ValueError("No voices provided")
 
-    # If single voice, validate and return it
-    if len(voices) == 1:
-        available_voices = await tts_service.list_voices()
-        if voices[0] not in available_voices:
-            raise ValueError(
-                f"Voice '{voices[0]}' not found. Available voices: {', '.join(sorted(available_voices))}"
-            )
-        return voices[0]
-
-    # For multiple voices, validate base voices exist
-    available_voices = await tts_service.list_voices()
-    for voice in voices:
-        if voice not in available_voices:
-            raise ValueError(
-                f"Base voice '{voice}' not found. Available voices: {', '.join(sorted(available_voices))}"
-            )
-
-    # Combine voices
-    return await tts_service.combine_voices(voices=voices)
+    # For multiple voices, combine them with +
+    return "+".join(voices)
 
 
 async def stream_audio_chunks(
-    tts_service: TTSService, 
+    tts_service: TTSService,
     request: OpenAISpeechRequest,
     client_request: Request
 ) -> AsyncGenerator[bytes, None]:
     """Stream audio chunks as they're generated with client disconnect handling"""
-    voice_to_use = await process_voices(request.voice, tts_service)
+    voice_name = await process_voices(request.voice, tts_service)
     
     try:
+        logger.info(f"Starting audio generation with lang_code: {request.lang_code}")
         async for chunk in tts_service.generate_audio_stream(
             text=request.input,
-            voice=voice_to_use,
+            voice=voice_name,
             speed=request.speed,
             output_format=request.response_format,
+            lang_code=request.lang_code,
         ):
             # Check if client is still connected
             is_disconnected = client_request.is_disconnected
@@ -158,7 +173,7 @@ async def create_speech(
     try:
         # model_name = get_model_name(request.model)
         tts_service = await get_tts_service()
-        voice_to_use = await process_voices(request.voice, tts_service)
+        voice_name = await process_voices(request.voice, tts_service)
 
         # Set content type based on format
         content_type = {
@@ -236,8 +251,9 @@ async def create_speech(
             # Generate complete audio using public interface
             audio, _ = await tts_service.generate_audio(
                 text=request.input,
-                voice=voice_to_use,
-                speed=request.speed
+                voice=voice_name,
+                speed=request.speed,
+                lang_code=request.lang_code
             )
 
             # Convert to requested format with proper finalization
@@ -349,25 +365,77 @@ async def list_voices():
 
 @router.post("/audio/voices/combine")
 async def combine_voices(request: Union[str, List[str]]):
-    """Combine multiple voices into a new voice.
+    """Combine multiple voices into a new voice and return the .pt file.
 
     Args:
         request: Either a string with voices separated by + (e.g. "voice1+voice2")
                 or a list of voice names to combine
 
     Returns:
-        Dict with combined voice name and list of all available voices
+        FileResponse with the combined voice .pt file
 
     Raises:
         HTTPException:
             - 400: Invalid request (wrong number of voices, voice not found)
             - 500: Server error (file system issues, combination failed)
     """
+    # Check if local voice saving is allowed
+    if not settings.allow_local_voice_saving:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "permission_denied",
+                "message": "Local voice saving is disabled",
+                "type": "permission_error"
+            }
+        )
+
     try:
+        # Convert input to list of voices
+        if isinstance(request, str):
+            # Check if it's an OpenAI voice name
+            mapped_voice = _openai_mappings["voices"].get(request)
+            if mapped_voice:
+                request = mapped_voice
+            voices = [v.strip() for v in request.split("+") if v.strip()]
+        else:
+            # For list input, map each voice if it's an OpenAI voice name
+            voices = [_openai_mappings["voices"].get(v, v) for v in request]
+            voices = [v.strip() for v in voices if v.strip()]
+
+        if not voices:
+            raise ValueError("No voices provided")
+
+        # For multiple voices, validate base voices exist
         tts_service = await get_tts_service()
-        combined_voice = await process_voices(request, tts_service)
-        voices = await tts_service.list_voices()
-        return {"voices": voices, "voice": combined_voice}
+        available_voices = await tts_service.list_voices()
+        for voice in voices:
+            if voice not in available_voices:
+                raise ValueError(
+                    f"Base voice '{voice}' not found. Available voices: {', '.join(sorted(available_voices))}"
+                )
+
+        # Combine voices
+        combined_tensor = await tts_service.combine_voices(voices=voices)
+        combined_name = "+".join(voices)
+
+        # Save to temp file
+        temp_dir = tempfile.gettempdir()
+        voice_path = os.path.join(temp_dir, f"{combined_name}.pt")
+        buffer = io.BytesIO()
+        torch.save(combined_tensor, buffer)
+        async with aiofiles.open(voice_path, 'wb') as f:
+            await f.write(buffer.getvalue())
+        
+        return FileResponse(
+            voice_path,
+            media_type="application/octet-stream",
+            filename=f"{combined_name}.pt",
+            headers={
+                "Content-Disposition": f"attachment; filename={combined_name}.pt",
+                "Cache-Control": "no-cache"
+            }
+        )
 
     except ValueError as e:
         logger.warning(f"Invalid voice combination request: {str(e)}")

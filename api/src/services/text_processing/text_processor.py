@@ -7,11 +7,7 @@ from loguru import logger
 from .phonemizer import phonemize
 from .normalizer import normalize_text
 from .vocabulary import tokenize
-
-# Target token ranges
-TARGET_MIN = 200
-TARGET_MAX = 350
-ABSOLUTE_MAX = 500
+from ...core.config import settings
 
 def process_text_chunk(text: str, language: str = "a", skip_phonemize: bool = False) -> List[int]:
     """Process a chunk of text through normalization, phonemization, and tokenization.
@@ -94,7 +90,7 @@ def get_sentence_info(text: str) -> List[Tuple[str, List[int], int]]:
         
     return results
 
-async def smart_split(text: str, max_tokens: int = ABSOLUTE_MAX) -> AsyncGenerator[Tuple[str, List[int]], None]:
+async def smart_split(text: str, max_tokens: int = settings.absolute_max_tokens) -> AsyncGenerator[Tuple[str, List[int]], None]:
     """Build optimal chunks targeting 300-400 tokens, never exceeding max_tokens."""
     start_time = time.time()
     chunk_count = 0
@@ -138,7 +134,7 @@ async def smart_split(text: str, max_tokens: int = ABSOLUTE_MAX) -> AsyncGenerat
                 count = len(tokens)
                 
                 # If adding clause keeps us under max and not optimal yet
-                if clause_count + count <= max_tokens and clause_count + count <= TARGET_MAX:
+                if clause_count + count <= max_tokens and clause_count + count <= settings.target_max_tokens:
                     clause_chunk.append(full_clause)
                     clause_tokens.extend(tokens)
                     clause_count += count
@@ -161,7 +157,7 @@ async def smart_split(text: str, max_tokens: int = ABSOLUTE_MAX) -> AsyncGenerat
                 yield chunk_text, clause_tokens
                 
         # Regular sentence handling
-        elif current_count >= TARGET_MIN and current_count + count > TARGET_MAX:
+        elif current_count >= settings.target_min_tokens and current_count + count > settings.target_max_tokens:
             # If we have a good sized chunk and adding next sentence exceeds target,
             # yield current chunk and start new one
             chunk_text = " ".join(current_chunk)
@@ -171,12 +167,12 @@ async def smart_split(text: str, max_tokens: int = ABSOLUTE_MAX) -> AsyncGenerat
             current_chunk = [sentence]
             current_tokens = tokens
             current_count = count
-        elif current_count + count <= TARGET_MAX:
+        elif current_count + count <= settings.target_max_tokens:
             # Keep building chunk while under target max
             current_chunk.append(sentence)
             current_tokens.extend(tokens)
             current_count += count
-        elif current_count + count <= max_tokens and current_count < TARGET_MIN:
+        elif current_count + count <= max_tokens and current_count < settings.target_min_tokens:
             # Only exceed target max if we haven't reached minimum size yet
             current_chunk.append(sentence)
             current_tokens.extend(tokens)

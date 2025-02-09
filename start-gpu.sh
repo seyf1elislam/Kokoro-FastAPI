@@ -7,8 +7,8 @@ PROJECT_ROOT=$(pwd)
 export USE_GPU=true
 export USE_ONNX=false
 export PYTHONPATH=$PROJECT_ROOT:$PROJECT_ROOT/api
-export MODEL_DIR=$PROJECT_ROOT/api/src/models
-export VOICES_DIR=$PROJECT_ROOT/api/src/voices
+export MODEL_DIR=src/models
+export VOICES_DIR=src/voices/v1_0
 export WEB_PLAYER_PATH=$PROJECT_ROOT/web
 
 # Run FastAPI with GPU extras using uv run

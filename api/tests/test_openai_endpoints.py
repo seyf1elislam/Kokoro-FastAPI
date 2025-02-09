@@ -29,8 +29,8 @@ def mock_openai_mappings():
     """Mock OpenAI mappings for testing."""
     with patch("api.src.routers.openai_compatible._openai_mappings", {
         "models": {
-            "tts-1": "kokoro-v0_19",
-            "tts-1-hd": "kokoro-v0_19"
+            "tts-1": "kokoro-v1_0",
+            "tts-1-hd": "kokoro-v1_0"
         },
         "voices": {
             "alloy": "am_adam",
@@ -330,16 +330,19 @@ def test_list_voices(mock_tts_service):
     assert "voice1" in data["voices"]
     assert "voice2" in data["voices"]
 
-def test_combine_voices(mock_tts_service):
+@patch('api.src.routers.openai_compatible.settings')
+def test_combine_voices(mock_settings, mock_tts_service):
     """Test combining voices endpoint"""
+    # Enable local voice saving for this test
+    mock_settings.allow_local_voice_saving = True
+    
     response = client.post(
         "/v1/audio/voices/combine",
         json="voice1+voice2"
     )
     assert response.status_code == 200
-    data = response.json()
-    assert "voice" in data
-    assert data["voice"] == "voice1_voice2"
+    assert response.headers["content-type"] == "application/octet-stream"
+    assert "voice1+voice2.pt" in response.headers["content-disposition"]
 
 def test_server_error(mock_tts_service, test_voice):
     """Test handling of server errors"""

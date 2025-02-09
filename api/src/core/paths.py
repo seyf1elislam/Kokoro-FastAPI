@@ -41,7 +41,7 @@ async def _find_file(
             if filter_fn is None or filter_fn(full_path):
                 return full_path
                 
-    raise RuntimeError(f"File not found: {filename} in paths: {search_paths}")
+    raise FileNotFoundError(f"File not found: {filename} in paths: {search_paths}")
 
 
 async def _scan_directories(
@@ -127,7 +127,7 @@ async def get_voice_path(voice_name: str) -> str:
     
     voice_file = f"{voice_name}.pt"
     
-    # Search in voice directory
+    # Search in voice directory/o
     search_paths = [voice_dir]
     logger.debug(f"Searching for voice in path: {voice_dir}")
     
@@ -160,7 +160,7 @@ async def list_voices() -> List[str]:
     return sorted([name[:-3] for name in voices])  # Remove .pt extension
 
 
-async def load_voice_tensor(voice_path: str, device: str = "cpu") -> torch.Tensor:
+async def load_voice_tensor(voice_path: str, device: str = "cpu", weights_only=False) -> torch.Tensor:
     """Load voice tensor from file.
     
     Args:
@@ -179,7 +179,7 @@ async def load_voice_tensor(voice_path: str, device: str = "cpu") -> torch.Tenso
             return torch.load(
                 io.BytesIO(data),
                 map_location=device,
-                weights_only=True
+                weights_only=weights_only
             )
     except Exception as e:
         raise RuntimeError(f"Failed to load voice tensor from {voice_path}: {e}")

@@ -1,69 +1,65 @@
-header {
-    margin-bottom: 2rem;
-    text-align: center;
-    padding-top: 0.5rem;
-}
-
 .logo-container {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 20px;
-    margin-bottom: 0.25rem;
+    gap: 0.75rem;
 }
 
 h1 {
-    font-size: 5rem;
+    font-size: 1.75rem;
     font-weight: 700;
     margin: 0;
-    line-height: 1.1;
+    line-height: 1;
     background: linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
                 linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px);
-    background-size: 10px 10px;
+    background-size: 5px 5px;
     -webkit-background-clip: text;
     background-clip: text;
     color: var(--text);
     text-shadow: 
-        -2px -2px 0 rgba(0,0,0,0.5),  
-        2px -2px 0 rgba(0,0,0,0.5),
-        -2px 2px 0 rgba(0,0,0,0.5),
-        2px 2px 0 rgba(0,0,0,0.5),
-        3px 3px var(--fg-color);
+        -1px -1px 0 rgba(0,0,0,0.5),  
+        1px -1px 0 rgba(0,0,0,0.5),
+        -1px 1px 0 rgba(0,0,0,0.5),
+        1px 1px 0 rgba(0,0,0,0.5),
+        2px 2px var(--fg-color);
 }
 
-.subtitle {
-    color: var(--text-light);
-    font-size: 1.5rem;
-    opacity: 0.9;
-    margin-top: 0.5rem;
+@media (max-width: 768px) {
+    .logo-container {
+        gap: 0.5rem;
+    }
+    
+    h1 {
+        font-size: 1.5rem;
+    }
 }
 
 .cup {
-    width: 40px;
-    height: 50px;
-    border: 3px solid var(--text);
-    border-radius: 0 0 20px 20px;
+    width: 16px;
+    height: 20px;
+    border: 2px solid var(--text);
+    border-radius: 0 0 8px 8px;
     position: relative;
-    animation: float 3s ease-in-out 2;
+    animation: float 3s ease-in-out;
+    animation-iteration-count: 3;
     animation-fill-mode: forwards;
 }
 
 .handle {
-    width: 15px;
-    height: 25px;
-    border: 3px solid var(--text);
-    border-radius: 0 10px 10px 0;
+    width: 6px;
+    height: 10px;
+    border: 2px solid var(--text);
+    border-radius: 0 4px 4px 0;
     position: absolute;
-    right: -15px;
-    top: 10px;
+    right: -6px;
+    top: 4px;
 }
 
 .steam {
     position: absolute;
-    top: -15px;
-    left: 5px;
-    right: 5px;
-    height: 15px;
+    top: -6px;
+    left: 2px;
+    right: 2px;
+    height: 6px;
     display: flex;
     justify-content: space-between;
 }
@@ -71,23 +67,27 @@ h1 {
 .steam::before,
 .steam::after {
     content: "";
-    width: 10px;
+    width: 3px;
     height: 100%;
     background: rgba(255,255,255,0.7);
-    border-radius: 10px;
-    animation: steam 2s 2;
+    border-radius: 3px;
+    animation: steam 2s;
+    animation-iteration-count: 3;
     animation-fill-mode: forwards;
 }
 
 @keyframes steam {
     to {
-        transform: translateY(-10px) scale(1.5);
+        transform: translateY(-6px) scale(1.3);
         opacity: 0;
     }
 }
 
 @keyframes float {
     50% {
-        transform: translateY(-5px);
+        transform: translateY(-2px);
+    }
+    100% {
+        transform: translateY(0);
     }
 }

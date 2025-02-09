@@ -1,103 +1,104 @@
 #!/usr/bin/env python3
+"""Download and prepare Kokoro v1.0 model."""
+
+import json
 import os
-import sys
-import argparse
-import requests
 from pathlib import Path
-from typing import List
+from urllib.request import urlretrieve
 
-def download_file(url: str, output_dir: Path, model_type: str, overwrite:str) -> bool:
-    """Download a file from URL to the specified directory.
+from loguru import logger
+
+
+def verify_files(model_path: str, config_path: str) -> bool:
+    """Verify that model files exist and are valid.
     
+    Args:
+        model_path: Path to model file
+        config_path: Path to config file
+        
     Returns:
-        bool: True if download succeeded, False otherwise
+        True if files exist and are valid
     """
-    filename = os.path.basename(url)
-    if not filename.endswith(f'.{model_type}'):
-        print(f"Warning: {filename} is not a .{model_type} file", file=sys.stderr)
-        return False
-        
-    output_path = output_dir / filename
-    
-    if os.path.exists(output_path):
-        print(f"{filename} exists. Canceling download")
-        return True
-    
-    print(f"Downloading {filename}...")
     try:
-        response = requests.get(url, stream=True)
-        response.raise_for_status()
-        
-        with open(output_path, 'wb') as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
-        print(f"Successfully downloaded {filename}")
-        return True
-    except Exception as e:
-        print(f"Error downloading {filename}: {e}", file=sys.stderr)
-        return False
-
-def find_project_root() -> Path:
-    """Find project root by looking for api directory."""
-    max_steps = 5
-    current = Path(__file__).resolve()
-    for _ in range(max_steps):
-        if (current / 'api').is_dir():
-            return current
-        current = current.parent
-    raise RuntimeError("Could not find project root (no api directory found)")
-
-def main() -> int:
-    """Download models to the project.
-    
-    Returns:
-        int: Exit code (0 for success, 1 for failure)
-    """
-    parser = argparse.ArgumentParser(description='Download model files')
-    parser.add_argument('--type', choices=['pth', 'onnx'], required=True,
-                      help='Model type to download (pth or onnx)')
-    parser.add_argument('--overwrite', action='store_true', help='Overwite existing files')
-    parser.add_argument('urls', nargs='*', help='Optional model URLs to download')
-    args = parser.parse_args()
-
-    try:
-        # Find project root and ensure models directory exists
-        project_root = find_project_root()
-        models_dir = project_root / 'api' / 'src' / 'models'
-        print(f"Downloading models to {models_dir}")
-        models_dir.mkdir(exist_ok=True)
-        
-        # Default models if no arguments provided
-        default_models = {
-            'pth': [
-                "https://github.com/remsky/Kokoro-FastAPI/releases/download/v0.1.0/kokoro-v0_19.pth",
-                "https://github.com/remsky/Kokoro-FastAPI/releases/download/v0.1.0/kokoro-v0_19-half.pth"
-            ],
-            'onnx': [
-                "https://github.com/remsky/Kokoro-FastAPI/releases/download/v0.1.0/kokoro-v0_19.onnx",
-                "https://github.com/remsky/Kokoro-FastAPI/releases/download/v0.1.0/kokoro-v0_19_fp16.onnx"
-            ]
-        }
-        
-        # Use provided models or default
-        models_to_download = args.urls if args.urls else default_models[args.type]
-        
-        # Download all models
-        success = True
-        for model_url in models_to_download:
-            if not download_file(model_url, models_dir, args.type,args.overwrite):
-                success = False
-        
-        if success:
-            print(f"{args.type.upper()} model download complete!")
-            return 0
-        else:
-            print("Some downloads failed", file=sys.stderr)
-            return 1
+        # Check files exist
+        if not os.path.exists(model_path):
+            return False
+        if not os.path.exists(config_path):
+            return False
             
+        # Verify config file is valid JSON
+        with open(config_path) as f:
+            config = json.load(f)
+            
+        # Check model file size (should be non-zero)
+        if os.path.getsize(model_path) == 0:
+            return False
+            
+        return True
+    except Exception:
+        return False
+
+
+def download_model(output_dir: str) -> None:
+    """Download model files from GitHub release.
+    
+    Args:
+        output_dir: Directory to save model files
+    """
+    try:
+        # Create output directory
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Define file paths
+        model_file = "kokoro-v1_0.pth"
+        config_file = "config.json"
+        model_path = os.path.join(output_dir, model_file)
+        config_path = os.path.join(output_dir, config_file)
+        
+        # Check if files already exist and are valid
+        if verify_files(model_path, config_path):
+            logger.info("Model files already exist and are valid")
+            return
+            
+        logger.info("Downloading Kokoro v1.0 model files")
+        
+        # GitHub release URLs (to be updated with v0.2.0 release)
+        base_url = "https://github.com/remsky/Kokoro-FastAPI/releases/download/v0.1.4"
+        model_url = f"{base_url}/{model_file}"
+        config_url = f"{base_url}/{config_file}"
+        
+        # Download files
+        logger.info("Downloading model file...")
+        urlretrieve(model_url, model_path)
+        
+        logger.info("Downloading config file...")
+        urlretrieve(config_url, config_path)
+        
+        # Verify downloaded files
+        if not verify_files(model_path, config_path):
+            raise RuntimeError("Failed to verify downloaded files")
+            
+        logger.info(f"✓ Model files prepared in {output_dir}")
+        
     except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
-        return 1
+        logger.error(f"Failed to download model: {e}")
+        raise
+
+
+def main():
+    """Main entry point."""
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="Download Kokoro v1.0 model")
+    parser.add_argument(
+        "--output",
+        required=True,
+        help="Output directory for model files"
+    )
+    
+    args = parser.parse_args()
+    download_model(args.output)
+
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

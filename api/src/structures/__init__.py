@@ -1,3 +1,17 @@
-from .schemas import OpenAISpeechRequest
+from .schemas import (
+    OpenAISpeechRequest,
+    CaptionedSpeechRequest,
+    CaptionedSpeechResponse,
+    WordTimestamp,
+    TTSStatus,
+    VoiceCombineRequest
+)
 
-__all__ = ["OpenAISpeechRequest"]
+__all__ = [
+    "OpenAISpeechRequest",
+    "CaptionedSpeechRequest",
+    "CaptionedSpeechResponse",
+    "WordTimestamp",
+    "TTSStatus",
+    "VoiceCombineRequest"
+]

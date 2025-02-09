@@ -8,7 +8,7 @@ export class AudioService {
         this.minimumPlaybackSize = 50000; // 50KB minimum before playback
         this.textLength = 0;
         this.shouldAutoplay = false;
-        this.CHARS_PER_CHUNK = 300; // Estimated chars per chunk
+        this.CHARS_PER_CHUNK = 150; // Estimated chars per chunk
         this.serverDownloadPath = null; // Server-side download path
         this.pendingOperations = []; // Queue for buffer operations
     }
@@ -42,7 +42,8 @@ export class AudioService {
                     response_format: 'mp3',
                     stream: true,
                     speed: speed,
-                    return_download_link: true
+                    return_download_link: true,
+                    lang_code: document.getElementById('lang-select').value || undefined
                 }),
                 signal: this.controller.signal
             });
@@ -137,6 +138,12 @@ export class AudioService {
                     // Signal completion
                     onProgress?.(estimatedChunks, estimatedChunks);
                     this.dispatchEvent('complete');
+                    
+                    // Check if we should autoplay for small inputs that didn't trigger during streaming
+                    if (this.shouldAutoplay && !hasStartedPlaying && this.sourceBuffer.buffered.length > 0) {
+                        setTimeout(() => this.play(), 100);
+                    }
+                    
                     setTimeout(() => {
                         this.dispatchEvent('downloadReady');
                     }, 800);
@@ -375,8 +382,6 @@ export class AudioService {
         this.sourceBuffer = null;
         this.serverDownloadPath = null;
         this.pendingOperations = [];
-
-        window.location.reload();
     }
 
     cleanup() {

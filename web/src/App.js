@@ -4,11 +4,11 @@ import PlayerState from './state/PlayerState.js';
 import PlayerControls from './components/PlayerControls.js';
 import VoiceSelector from './components/VoiceSelector.js';
 import WaveVisualizer from './components/WaveVisualizer.js';
+import TextEditor from './components/TextEditor.js';
 
 export class App {
     constructor() {
         this.elements = {
-            textInput: document.getElementById('text-input'),
             generateBtn: document.getElementById('generate-btn'),
             generateBtnText: document.querySelector('#generate-btn .btn-text'),
             generateBtnLoader: document.querySelector('#generate-btn .loader'),
@@ -16,8 +16,7 @@ export class App {
             autoplayToggle: document.getElementById('autoplay-toggle'),
             formatSelect: document.getElementById('format-select'),
             status: document.getElementById('status'),
-            cancelBtn: document.getElementById('cancel-btn'),
-            clearBtn: document.getElementById('clear-btn')
+            cancelBtn: document.getElementById('cancel-btn')
         };
 
         this.initialize();
@@ -33,6 +32,16 @@ export class App {
         this.playerControls = new PlayerControls(this.audioService, this.playerState);
         this.voiceSelector = new VoiceSelector(this.voiceService);
         this.waveVisualizer = new WaveVisualizer(this.playerState);
+        
+        // Initialize text editor
+        const editorContainer = document.getElementById('text-editor');
+        this.textEditor = new TextEditor(editorContainer, {
+            linesPerPage: 20,
+            onTextChange: (text) => {
+                // Optional: Handle text changes here if needed
+                console.log('Text changed:', text);
+            }
+        });
 
         // Initialize voice selector
         const voicesLoaded = await this.voiceSelector.initialize();
@@ -57,14 +66,8 @@ export class App {
         this.elements.cancelBtn.addEventListener('click', () => {
             this.audioService.cancel();
             this.setGenerating(false);
-            this.elements.downloadBtn.style.display = 'none';
+            this.elements.downloadBtn.classList.remove('ready');
             this.showStatus('Generation cancelled', 'info');
-        });
-
-        // Clear text button
-        this.elements.clearBtn.addEventListener('click', () => {
-            this.elements.textInput.value = '';
-            this.elements.textInput.focus();
         });
 
         // Handle page unload
@@ -78,7 +81,7 @@ export class App {
     setupAudioEvents() {
         // Handle download button visibility
         this.audioService.addEventListener('downloadReady', () => {
-            this.elements.downloadBtn.style.display = 'flex';
+            this.elements.downloadBtn.classList.add('ready');
         });
 
         // Handle buffer errors
@@ -135,14 +138,14 @@ export class App {
     setGenerating(isGenerating) {
         this.playerState.setGenerating(isGenerating);
         this.elements.generateBtn.disabled = isGenerating;
-        this.elements.generateBtn.className = isGenerating ? 'loading' : '';
+        this.elements.generateBtn.classList.toggle('loading', isGenerating);
         this.elements.generateBtnLoader.style.display = isGenerating ? 'block' : 'none';
         this.elements.generateBtnText.style.visibility = isGenerating ? 'hidden' : 'visible';
         this.elements.cancelBtn.style.display = isGenerating ? 'block' : 'none';
     }
 
     validateInput() {
-        const text = this.elements.textInput.value.trim();
+        const text = this.textEditor.getText().trim();
         if (!text) {
             this.showStatus('Please enter some text', 'error');
             return false;
@@ -162,12 +165,12 @@ export class App {
             return;
         }
 
-        const text = this.elements.textInput.value.trim();
+        const text = this.textEditor.getText().trim();
         const voice = this.voiceService.getSelectedVoiceString();
         const speed = this.playerState.getState().speed;
 
         this.setGenerating(true);
-        this.elements.downloadBtn.style.display = 'none';
+        this.elements.downloadBtn.classList.remove('ready');
 
         // Just reset progress bar, don't do full cleanup
         this.waveVisualizer.updateProgress(0, 1);

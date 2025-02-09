@@ -19,21 +19,38 @@ find_project_root() {
     exit 1
 }
 
+# Function to verify files exist and are valid
+verify_files() {
+    local model_path="$1"
+    local config_path="$2"
+    
+    # Check files exist
+    if [ ! -f "$model_path" ] || [ ! -f "$config_path" ]; then
+        return 1
+    fi
+    
+    # Check files are not empty
+    if [ ! -s "$model_path" ] || [ ! -s "$config_path" ]; then
+        return 1
+    fi
+    
+    # Try to parse config.json
+    if ! jq . "$config_path" >/dev/null 2>&1; then
+        return 1
+    fi
+    
+    return 0
+}
+
 # Function to download a file
 download_file() {
     local url="$1"
-    local output_dir="$2"
-    local model_type="$3"
-    local filename=$(basename "$url")
-    
-    # Validate file extension
-    if [[ ! "$filename" =~ \.$model_type$ ]]; then
-        echo "Warning: $filename is not a .$model_type file" >&2
-        return 1
-    }
+    local output_path="$2"
+    local filename=$(basename "$output_path")
     
     echo "Downloading $filename..."
-    if curl -L "$url" -o "$output_dir/$filename"; then
+    mkdir -p "$(dirname "$output_path")"
+    if curl -L "$url" -o "$output_path"; then
         echo "Successfully downloaded $filename"
         return 0
     else
@@ -42,69 +59,49 @@ download_file() {
     fi
 }
 
-# Parse arguments
-MODEL_TYPE=""
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        --type)
-            MODEL_TYPE="$2"
-            shift 2
-            ;;
-        *)
-            # If no flag specified, treat remaining args as model URLs
-            break
-            ;;
-    esac
-done
-
-# Validate model type
-if [ "$MODEL_TYPE" != "pth" ] && [ "$MODEL_TYPE" != "onnx" ]; then
-    echo "Error: Must specify model type with --type (pth or onnx)" >&2
-    exit 1
-fi
-
 # Find project root and ensure models directory exists
 PROJECT_ROOT=$(find_project_root)
 if [ $? -ne 0 ]; then
     exit 1
 fi
 
-MODELS_DIR="$PROJECT_ROOT/api/src/models"
-echo "Downloading models to $MODELS_DIR"
-mkdir -p "$MODELS_DIR"
+MODEL_DIR="$PROJECT_ROOT/api/src/models/v1_0"
+echo "Model directory: $MODEL_DIR"
+mkdir -p "$MODEL_DIR"
 
-# Default models if no arguments provided
-if [ "$MODEL_TYPE" = "pth" ]; then
-    DEFAULT_MODELS=(
-        "https://github.com/remsky/Kokoro-FastAPI/releases/download/v0.1.0/kokoro-v0_19.pth"
-        "https://github.com/remsky/Kokoro-FastAPI/releases/download/v0.1.0/kokoro-v0_19-half.pth"
-    )
-else
-    DEFAULT_MODELS=(
-        "https://github.com/remsky/Kokoro-FastAPI/releases/download/v0.1.0/kokoro-v0_19.onnx"
-        "https://github.com/remsky/Kokoro-FastAPI/releases/download/v0.1.0/kokoro-v0_19_fp16.onnx"
-    )
+# Define file paths
+MODEL_FILE="kokoro-v1_0.pth"
+CONFIG_FILE="config.json"
+MODEL_PATH="$MODEL_DIR/$MODEL_FILE"
+CONFIG_PATH="$MODEL_DIR/$CONFIG_FILE"
+
+# Check if files already exist and are valid
+if verify_files "$MODEL_PATH" "$CONFIG_PATH"; then
+    echo "Model files already exist and are valid"
+    exit 0
 fi
 
-# Use provided models or default
-if [ $# -gt 0 ]; then
-    MODELS=("$@")
-else
-    MODELS=("${DEFAULT_MODELS[@]}")
-fi
+# Define URLs
+BASE_URL="https://github.com/remsky/Kokoro-FastAPI/releases/download/v1.4"
+MODEL_URL="$BASE_URL/$MODEL_FILE"
+CONFIG_URL="$BASE_URL/$CONFIG_FILE"
 
-# Download all models
+# Download files
 success=true
-for model in "${MODELS[@]}"; do
-    if ! download_file "$model" "$MODELS_DIR" "$MODEL_TYPE"; then
-        success=false
-    fi
-done
 
-if [ "$success" = true ]; then
-    echo "${MODEL_TYPE^^} model download complete!"
+if ! download_file "$MODEL_URL" "$MODEL_PATH"; then
+    success=false
+fi
+
+if ! download_file "$CONFIG_URL" "$CONFIG_PATH"; then
+    success=false
+fi
+
+# Verify downloaded files
+if [ "$success" = true ] && verify_files "$MODEL_PATH" "$CONFIG_PATH"; then
+    echo "✓ Model files prepared in $MODEL_DIR"
     exit 0
 else
-    echo "Some downloads failed" >&2
+    echo "Failed to download or verify model files" >&2
     exit 1
 fi

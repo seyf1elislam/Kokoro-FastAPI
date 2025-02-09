@@ -2,6 +2,37 @@
 
 Notable changes to this project will be documented in this file.
 
+## [v0.2.0post1] - 2025-02-07
+- Fix: Building Kokoro from source with adjustments, to avoid CUDA lock 
+- Fixed ARM64 compatibility on Spacy dep to avoid emulation slowdown
+- Added g++ for Japanese language support
+- Temporarily disabled Vietnamese language support due to ARM64 compatibility issues
+
+## [v0.2.0-pre] - 2025-02-06
+### Added
+- Complete Model Overhaul:
+  - Upgraded to Kokoro v1.0 model architecture
+  - Pre-installed multi-language support from Misaki:
+    - English (en), Japanese (ja), Korean (ko),Chinese (zh), Vietnamese (vi)
+  - All voice packs included for supported languages, along with the original versions.
+- Enhanced Audio Generation Features:
+  - Per-word timestamped caption generation
+  - Phoneme-based audio generation capabilities
+  - Detailed phoneme generation
+- Web UI Improvements:
+  - Improved voice mixing with weighted combinations
+  - Text file upload support
+  - Enhanced formatting and user interface
+  - Cleaner UI (in progress)
+  - Integration with https://github.com/hexgrad/kokoro and https://github.com/hexgrad/misaki packages
+
+### Removed
+- Deprecated support for Kokoro v0.19 model
+
+### Changes
+- Combine Voices endpoint now returns a .pt file, with generation combinations generated on the fly otherwise 
+
+
 ## [v0.1.4] - 2025-01-30
 ### Added
 - Smart Chunking System:

@@ -29,9 +29,10 @@ def setup_logger():
                 "sink": sys.stdout,
                 "format": "<fg #2E8B57>{time:hh:mm:ss A}</fg #2E8B57> | "
                 "{level: <8} | "
+                "<fg #4169E1>{module}:{line}</fg #4169E1> | "
                 "{message}",
                 "colorize": True,
-                "level": "INFO",
+                "level": "DEBUG",
             },
         ],
     }
@@ -56,25 +57,14 @@ async def lifespan(app: FastAPI):
     logger.info("Loading TTS model and voice packs...")
 
     try:
-        # Initialize managers globally
+        # Initialize managers
         model_manager = await get_manager()
         voice_manager = await get_voice_manager()
 
         # Initialize model with warmup and get status
-        device, model, voicepack_count = await model_manager.initialize_with_warmup(voice_manager)
-    except FileNotFoundError:
-        logger.error("""
-Model files not found! You need to either:
+        device, model, voicepack_count = await model_manager\
+            .initialize_with_warmup(voice_manager)
 
-1. Download models using the scripts:
-   GPU: python docker/scripts/download_model.py --type pth
-   CPU: python docker/scripts/download_model.py --type onnx
-
-2. Set environment variables in docker-compose:
-   GPU: DOWNLOAD_PTH=true
-   CPU: DOWNLOAD_ONNX=true
-""")
-        raise
     except Exception as e:
         logger.error(f"Failed to initialize model: {e}")
         raise
@@ -94,11 +84,13 @@ Model files not found! You need to either:
 {boundary}
                 """
     startup_msg += f"\nModel warmed up on {device}: {model}"
+    startup_msg += f"CUDA: {torch.cuda.is_available()}"
     startup_msg += f"\n{voicepack_count} voice packs loaded"
     
     # Add web player info if enabled
     if settings.enable_web_player:
         startup_msg += f"\n\nBeta Web Player: http://{settings.host}:{settings.port}/web/"
+        startup_msg += f"\nor http://localhost:{settings.port}/web/"
     else:
         startup_msg += "\n\nWeb Player: disabled"
         

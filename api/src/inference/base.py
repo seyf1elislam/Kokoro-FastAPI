@@ -1,14 +1,14 @@
-"""Base interfaces for model inference."""
+"""Base interface for Kokoro inference."""
 
 from abc import ABC, abstractmethod
-from typing import List, Optional
+from typing import AsyncGenerator, Optional, Union, Tuple
 
 import numpy as np
 import torch
 
 
 class ModelBackend(ABC):
-    """Abstract base class for model inference backends."""
+    """Abstract base class for model inference backend."""
 
     @abstractmethod
     async def load_model(self, path: str) -> None:
@@ -23,21 +23,21 @@ class ModelBackend(ABC):
         pass
 
     @abstractmethod
-    def generate(
+    async def generate(
         self,
-        tokens: List[int],
-        voice: torch.Tensor,
+        text: str,
+        voice: Union[str, Tuple[str, Union[torch.Tensor, str]]],
         speed: float = 1.0
-    ) -> np.ndarray:
-        """Generate audio from tokens.
+    ) -> AsyncGenerator[np.ndarray, None]:
+        """Generate audio from text.
         
         Args:
-            tokens: Input token IDs
-            voice: Voice embedding tensor
+            text: Input text to synthesize
+            voice: Either a voice path or tuple of (name, tensor/path)
             speed: Speed multiplier
             
-        Returns:
-            Generated audio samples
+        Yields:
+            Generated audio chunks
             
         Raises:
             RuntimeError: If generation fails
@@ -95,3 +95,4 @@ class BaseModelBackend(ModelBackend):
             self._model = None
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
+                torch.cuda.synchronize()

@@ -28,32 +28,29 @@ dependencies = [
     "munch==4.0.0",
     "tiktoken==0.8.0",
     "loguru==0.7.3",
-    "transformers==4.47.1",
     "openai>=1.59.6",
-    "ebooklib>=0.18",
-    "html2text>=2024.2.26",
     "pydub>=0.25.1",
     "matplotlib>=3.10.0",
-    "semchunk>=3.0.1",
     "mutagen>=1.47.0",
     "psutil>=6.1.1",
+    "kokoro @ git+https://github.com/hexgrad/kokoro.git@31a2b6337b8c1b1418ef68c48142328f640da938",
+    'misaki[en,ja,ko,zh] @ git+https://github.com/hexgrad/misaki.git@ebc76c21b66c5fc4866ed0ec234047177b396170',
+    "spacy==3.7.2",
+    "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl"
 ]
 
 [project.optional-dependencies]
 gpu = [
-    "torch==2.5.1+cu121",
-    "onnxruntime-gpu==1.20.1",
+    "torch==2.6.0+cu124",
 ]
 cpu = [
-    "torch==2.5.1",
-    "onnxruntime==1.20.1",
+    "torch==2.6.0",
 ]
 test = [
     "pytest==8.0.0",
     "pytest-cov==4.1.0",
     "httpx==0.26.0",
     "pytest-asyncio==0.23.5",
-    "gradio>=5",
     "openai>=1.59.6",
 ]
 
@@ -78,7 +75,7 @@ explicit = true
 
 [[tool.uv.index]]
 name = "pytorch-cuda"
-url = "https://download.pytorch.org/whl/cu121"
+url = "https://download.pytorch.org/whl/cu124"
 explicit = true
 
 [build-system]
